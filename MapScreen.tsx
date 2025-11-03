@@ -29,7 +29,7 @@ const MapScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         setLoading(false);
       })
       .catch(() => {
-        console.log('⚠️ Backend not running — showing map only');
+        console.log('Backend not running — showing map only');
         setPotholes([]); // no freeze if offline
         setLoading(false);
       });
@@ -65,8 +65,27 @@ const MapScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         }}
         showsUserLocation
         showsCompass
-        zoomControlEnabled={true} // ✅ visible on Android; ignored on iOS safely
+        zoomControlEnabled={true} //visible on Android; ignored on iOS safely
       >
+        {/* 🔹 Static test pins */}
+        <Marker
+          coordinate={{ latitude: 28.6025, longitude: -81.2005 }}
+          title="Test Pothole 1"
+          description="Depth: 2.5 in"
+          pinColor="#F4A261"
+        />
+        <Marker
+          coordinate={{ latitude: 28.6040, longitude: -81.1990 }}
+          title="Test Pothole 2"
+          description="Depth: 4.0 in"
+          pinColor="#E63946"
+        />
+        <Marker
+          coordinate={{ latitude: 28.6010, longitude: -81.2030 }}
+          title="Test Pothole 3"
+          description="Depth: 1.2 in"
+          pinColor="#FFD166"
+        />
         {potholes.map((p, i) => (
           <Marker
             key={i}
@@ -77,10 +96,10 @@ const MapScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
               p.severity === 'minor'
                 ? '#FFD166'
                 : p.severity === 'moderate'
-                ? '#F4A261'
-                : p.severity === 'severe'
-                ? '#E63946'
-                : '#2A9D8F'
+                  ? '#F4A261'
+                  : p.severity === 'severe'
+                    ? '#E63946'
+                    : '#2A9D8F'
             }
           />
         ))}

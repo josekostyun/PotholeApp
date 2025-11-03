@@ -1,8 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
-  <!-- Internet permission for Axios + Maps -->
   <uses-permission android:name="android.permission.INTERNET" />
-
   <application
     android:name=".MainApplication"
     android:label="@string/app_name"
@@ -12,12 +9,12 @@
     android:theme="@style/SplashTheme"
     android:usesCleartextTraffic="${usesCleartextTraffic}"
     android:supportsRtl="true">
-
-    <!-- ✅ Google Maps API key goes here -->
+	
+    <!--Google Maps API key goes here -->
     <meta-data
       android:name="com.google.android.geo.API_KEY"
       android:value="AIzaSyA4iwG80F5ggGJdWi1xPrMg7WQSLv0QY2o" />
-
+	  
     <activity
       android:name=".SplashActivity"
       android:label="@string/app_name"
@@ -28,7 +25,7 @@
         <category android:name="android.intent.category.LAUNCHER" />
       </intent-filter>
     </activity>
-
+       
     <activity
       android:name=".MainActivity"
       android:label="@string/app_name"
