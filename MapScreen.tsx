@@ -6,9 +6,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import MapViewClustering from 'react-native-map-clustering';
 import axios from 'axios';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import mapStyles from './styles/components/mapStyles'; // ✅ adjust if your path differs
+import mapStyles from './styles/components/mapStyles';
+import { PermissionsAndroid, Platform } from 'react-native';
 
 interface Pothole {
   lat: number;
@@ -20,6 +22,30 @@ interface Pothole {
 const MapScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [potholes, setPotholes] = useState<Pothole[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 🔹 Optional location permission request (for blue dot demo)
+  useEffect(() => {
+    const maybeRequestLocation = async () => {
+      if (Platform.OS === 'android') {
+        try {
+          await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+            {
+              title: 'Allow Location Access?',
+              message:
+                'This helps show your current position on the map. You can deny if not needed.',
+              buttonPositive: 'OK',
+              buttonNegative: 'Cancel',
+            }
+          );
+        } catch (err) {
+          console.warn('Location permission not granted (demo mode)');
+        }
+      }
+    };
+
+    maybeRequestLocation();
+  }, []);
 
   useEffect(() => {
     axios
@@ -55,7 +81,7 @@ const MapScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       </TouchableOpacity>
 
       {/* MapView */}
-      <MapView
+      <MapViewClustering
         style={mapStyles.map}
         initialRegion={{
           latitude: 28.6024, // UCF coords for testing
@@ -66,6 +92,10 @@ const MapScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         showsUserLocation
         showsCompass
         zoomControlEnabled={true} //visible on Android; ignored on iOS safely
+        clusterColor="#2A9D8F"      // cluster bubble color
+        clusterTextColor="#FFFFFF"  // number color inside cluster
+        spiralEnabled={true}        // smooth animation when zooming
+        animationEnabled={true}
       >
         {/* 🔹 Static test pins */}
         <Marker
@@ -103,7 +133,7 @@ const MapScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             }
           />
         ))}
-      </MapView>
+      </MapViewClustering>
     </SafeAreaView>
   );
 };
