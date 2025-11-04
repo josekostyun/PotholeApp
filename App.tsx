@@ -11,16 +11,23 @@ import {
   ScrollView,
   Animated,
   Keyboard,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-
+import axios from "axios";
 import HomeScreen from './HomeScreen';
 import MapScreen from './MapScreen';
-import { loginStyles } from './styles/components/LoginScreenStyles'; // 
+import PotholeListScreen from './PotholeListScreen';
+
+import BleTestScreen from './BleTestScreen'; //Testing Purposes only
+
+import { loginStyles } from './styles/components/LoginScreenStyles'; //
 
 const Stack = createNativeStackNavigator();
+const BASE_URL = "https://potholeappbackend.onrender.com";
+
 
 function LoginScreen({ navigation }: any) {
   const [username, setUsername] = useState('');
@@ -53,10 +60,24 @@ function LoginScreen({ navigation }: any) {
     };
   }, []);
 
-  const handleLogin = () => {
-    console.log('Login pressed:', { username, password });
-    navigation.replace('Home'); // ✅ navigate to HomeScreen
-  };
+    const handleLogin = async () => {
+      try {
+        const res = await axios.post(`${BASE_URL}/api/users/login`, {
+          email: username,     // since your input is called "username"
+          password: password,
+        });
+
+        console.log("Login success:", res.data);
+        Alert.alert("Login successful", `Welcome, ${res.data.user.name}`);
+        navigation.replace("Home");  // go to HomeScreen on success
+      } catch (err: any) {
+        console.error("Login error:", err);
+        Alert.alert(
+          "Login failed",
+          err.response?.data?.error || "Unable to connect to server"
+        );
+      }
+    };
 
   return (
     <SafeAreaView style={loginStyles.container}>
@@ -170,6 +191,8 @@ export default function App() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Map" component={MapScreen} />
+        <Stack.Screen name="Potholes" component={PotholeListScreen} />
+        <Stack.Screen name="BleTest" component={BleTestScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

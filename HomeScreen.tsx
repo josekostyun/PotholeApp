@@ -20,12 +20,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const handleReviewReports = (): void => {
     console.log('Review Reports pressed');
-    // navigation.navigate('Reports'); // future screen
+    navigation.navigate('Potholes');
   };
 
   const handleReportProblem = (): void => {
     console.log('Report a Problem pressed');
-    // navigation.navigate('ReportProblem'); // future screen
+    navigation.navigate("BleTest");
   };
 
   const handleLogOut = (): void => {
