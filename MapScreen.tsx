@@ -1,16 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator, PermissionsAndroid, Platform,} from 'react-native';
+import MapView, { Marker, Region } from 'react-native-maps';
 import MapViewClustering from 'react-native-map-clustering';
 import axios from 'axios';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import mapStyles from './styles/components/mapStyles';
-import { PermissionsAndroid, Platform } from 'react-native';
+import Geolocation from 'react-native-geolocation-service';
+import { request, PERMISSIONS } from 'react-native-permissions';
 
 interface Pothole {
   lat: number;
@@ -22,46 +18,81 @@ interface Pothole {
 const MapScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [potholes, setPotholes] = useState<Pothole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [region, setRegion] = useState<Region | null>(null);
+  const [followUser, setFollowUser] = useState(true);
+  const mapRef = useRef<MapView>(null);
 
-  // 🔹 Optional location permission request (for blue dot demo)
+  // 🔹 Request permission + get initial location
   useEffect(() => {
-    const maybeRequestLocation = async () => {
-      if (Platform.OS === 'android') {
-        try {
+    const getPermissionAndLocation = async () => {
+      try {
+        if (Platform.OS === 'ios') {
+          await request(PERMISSIONS.IOS.LOCATION_WHEN_IN_USE);
+        } else {
           await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-            {
-              title: 'Allow Location Access?',
-              message:
-                'This helps show your current position on the map. You can deny if not needed.',
-              buttonPositive: 'OK',
-              buttonNegative: 'Cancel',
-            }
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
           );
-        } catch (err) {
-          console.warn('Location permission not granted (demo mode)');
         }
+
+        Geolocation.getCurrentPosition(
+          pos => {
+            const { latitude, longitude } = pos.coords;
+            setRegion({
+              latitude,
+              longitude,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            });
+            setLoading(false);
+          },
+          err => {
+            console.warn('Location error:', err);
+            setLoading(false);
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+        );
+      } catch (err) {
+        console.warn('Location permission error:', err);
+        setLoading(false);
       }
     };
 
-    maybeRequestLocation();
+    getPermissionAndLocation();
   }, []);
 
+  // 🔹 Watch for GPS updates
+  useEffect(() => {
+    const watchId = Geolocation.watchPosition(
+      pos => {
+        const { latitude, longitude } = pos.coords;
+        if (followUser) {
+          mapRef.current?.animateToRegion({
+            latitude,
+            longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          });
+        }
+      },
+      err => console.warn('Watch error:', err),
+      { enableHighAccuracy: true, distanceFilter: 5 }
+    );
+
+    return () => Geolocation.clearWatch(watchId);
+  }, [followUser]);
+
+  // 🔹 Fetch potholes
   useEffect(() => {
     axios
       .get('http://10.0.2.2:3000/api/potholes')
-      .then(res => {
-        setPotholes(res.data);
-        setLoading(false);
-      })
+      .then(res => setPotholes(res.data))
       .catch(() => {
         console.log('Backend not running — showing map only');
-        setPotholes([]); // no freeze if offline
-        setLoading(false);
+        setPotholes([]);
       });
   }, []);
 
-  if (loading) {
+  if (loading || !region) {
     return (
       <SafeAreaView style={mapStyles.loadingContainer}>
         <ActivityIndicator size="large" color="#FFF8E8" />
@@ -71,33 +102,24 @@ const MapScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={mapStyles.container}>
-      {/* Back Button */}
-      <TouchableOpacity
-        style={mapStyles.backButton}
-        onPress={() => navigation.goBack()}
-        activeOpacity={0.7}
-      >
-        <Text style={mapStyles.backButtonText}>← Back</Text>
-      </TouchableOpacity>
-
-      {/* MapView */}
+      {/* Map */}
       <MapViewClustering
+        ref={mapRef}
         style={mapStyles.map}
-        initialRegion={{
-          latitude: 28.6024, // UCF coords for testing
-          longitude: -81.2001,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        }}
+        initialRegion={region}
         showsUserLocation
+        followsUserLocation={false}
+        showsMyLocationButton
         showsCompass
-        zoomControlEnabled={true} //visible on Android; ignored on iOS safely
-        clusterColor="#2A9D8F"      // cluster bubble color
-        clusterTextColor="#FFFFFF"  // number color inside cluster
-        spiralEnabled={true}        // smooth animation when zooming
-        animationEnabled={true}
+        zoomControlEnabled
+        provider={Platform.OS === 'ios' ? null : 'google'}
+        clusterColor="#2A9D8F"
+        clusterTextColor="#FFFFFF"
+        spiralEnabled
+        animationEnabled
+        onPanDrag={() => setFollowUser(false)} // stop following when user pans
       >
-        {/* 🔹 Static test pins */}
+      {/* 🔹 Static test pins (UCF area for demo) */}
         <Marker
           coordinate={{ latitude: 28.6025, longitude: -81.2005 }}
           title="Test Pothole 1"
@@ -116,6 +138,7 @@ const MapScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
           description="Depth: 1.2 in"
           pinColor="#FFD166"
         />
+        {/* Pothole markers */}
         {potholes.map((p, i) => (
           <Marker
             key={i}
@@ -126,14 +149,30 @@ const MapScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
               p.severity === 'minor'
                 ? '#FFD166'
                 : p.severity === 'moderate'
-                  ? '#F4A261'
-                  : p.severity === 'severe'
-                    ? '#E63946'
-                    : '#2A9D8F'
+                ? '#F4A261'
+                : p.severity === 'severe'
+                ? '#E63946'
+                : '#2A9D8F'
             }
           />
         ))}
       </MapViewClustering>
+          <TouchableOpacity
+              style={mapStyles.backButton}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
+            >
+              <Text style={mapStyles.backButtonText}>← Back</Text>
+            </TouchableOpacity>
+          
+      {/*Recenter Button */}
+          <TouchableOpacity
+            onPress={() => setFollowUser(true)}
+            style={mapStyles.recenterButton}
+            activeOpacity={0.8}
+          >
+            <Text style={mapStyles.recenterText}>Recenter</Text>
+          </TouchableOpacity>
     </SafeAreaView>
   );
 };

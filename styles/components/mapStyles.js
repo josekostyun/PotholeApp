@@ -16,7 +16,7 @@ const mapStyles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: 20,
+    top: Platform.OS === 'ios' ? 65 : 20,
     left: 20,
     zIndex: 10,
     backgroundColor: '#FFF8E8',
@@ -26,13 +26,33 @@ const mapStyles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.25,
     shadowRadius: 4,
-    elevation: 4, // Android shadow
+    zIndex: 10, // ensures it renders above MapView
+    elevation: 10, // helps Android too // Android shadow
   },
   backButtonText: {
     color: '#000000',
     fontSize: 16,
     fontWeight: '600',
   },
+    recenterButton: {
+      position: 'absolute',
+      bottom: 40,
+      right: 20,
+      backgroundColor: '#FFF8E8',
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+      borderRadius: 10,
+      shadowColor: '#000',
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      zIndex: 10,
+      elevation: 10, // Android shadow
+    },
+    recenterText: {
+      color: '#000000',
+      fontSize: 16,
+      fontWeight: '600',
+    },
 });
 
 export default mapStyles;
